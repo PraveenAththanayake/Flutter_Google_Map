@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
@@ -11,6 +13,9 @@ class MapPage extends StatefulWidget {
 
 class _MapPageState extends State<MapPage> {
   Location _locationController = new Location();
+
+  final Completer<GoogleMapController> _mapcontroller =
+      Completer<GoogleMapController>();
 
   static const LatLng _pGooglePlex =
       LatLng(5.9497458017738625, 80.53710829720252);
@@ -26,10 +31,13 @@ class _MapPageState extends State<MapPage> {
 
   @override
   Widget build(BuildContext context) {
+    FutureOr<GoogleMapController>? controller;
     return Scaffold(
         body: _currentP == null
             ? const Center(child: Text("Loading"))
             : GoogleMap(
+                onMapCreated: ((GoogleMapControllercontroller) =>
+                    _mapcontroller.complete(controller)),
                 initialCameraPosition: CameraPosition(
                   target: _pGooglePlex,
                   zoom: 14,
@@ -48,6 +56,13 @@ class _MapPageState extends State<MapPage> {
                         icon: BitmapDescriptor.defaultMarker,
                         position: _pBusStand),
                   }));
+  }
+
+  Future<void> _cameraToPosition(LatLng pos) async {
+    final GoogleMapController controller = await _mapcontroller.future;
+    CameraPosition _newCameraPosition = CameraPosition(target: pos, zoom: 14);
+    await controller
+        .animateCamera(CameraUpdate.newCameraPosition(_newCameraPosition));
   }
 
   Future<void> getLocationUpdates() async {
@@ -78,6 +93,7 @@ class _MapPageState extends State<MapPage> {
           _currentP =
               LatLng(currentLocation.latitude!, currentLocation.longitude!);
           print(_currentP);
+          _cameraToPosition(_currentP!);
         });
       }
     });
